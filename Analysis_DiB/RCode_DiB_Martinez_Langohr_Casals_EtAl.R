@@ -7,6 +7,7 @@ load("NBAdata2019.RData")
 
 ## Data frames
 ## -----------
+## mortality: US mortality rates from 2000 to 2018 (Dim: 83 x 39)
 ## nbaformuBW: Former African-american and white NBA players (Dim: 3845 x 22)
 ## nbaformupd: Former NBA players (by July 31, 2019) (Dim: 3962 x 22)
 ## nbaupd: Active and former NBA players (by July 31, 2019) (Dim: 4374 x 22)
@@ -29,23 +30,33 @@ res2 <- compareGroups(cens ~ pos + etni + place + lefthanded  +
 restab2 <- createTable(res2, show.all = TRUE, show.p.overall = FALSE)
 restab2
 
-detach(package:compareGroups)
+
+### ===========================================================================
+### Table 2 (Cox model) =======================================================
+### ===========================================================================
+library(Epi)
+nbamodLT <- coxph(Surv(ageleft, ageright, cens) ~ cms2 + etni + from, nbaupdBW)
+summary(nbamodLT)
+round(ci.lin(nbamodLT, Exp = TRUE), 3)
+
+## Checking for proportional hazards assumption
+cox.zph(nbamodLT)
+windows(width = 12, height = 12)
+par(mfrow = c(2, 2), font = 2, font.lab = 4, font.axis = 2, las = 1, pch = 16)
+plot(cox.zph(nbamodLT), lwd = 3, col = 2)
 
 ### ===========================================================================
 ### Figure 1 ==================================================================
 ### ===========================================================================
-# windows(width = 9, height = 6)
 library(survival)
 library(rms)
-pdf("Survival2_2021.pdf", width = 10)
-# tiff("Survival2_2021.tiff", width = 720)
+windows(width = 10)
 par(las = 1, font.lab = 2, font.axis = 2, font = 2, mar = c(5, 4, 2, 2))
 survplot(npsurv(Surv(ageleft, ageright, cens) ~ 1, nbaupd), lwd = 3,
          xlab = "Age at death",
          time.inc = 5, col.fill = grey(0.75),
          ylab = "Estimated survival probability")
 segments(0, 0.5, 100, 0.5, lwd = 3)
-dev.off()
 
 
 ### ===========================================================================
@@ -128,9 +139,7 @@ smrs <- data.frame(matrix(unlist(SMRs), nc = 6, byrow = TRUE))
 rownames(smrs) <- years
 names(smrs) <- paste0(rep(c("bl", "wh"), each = 3), c("smr", "low95", "upp95"))
 
-# windows(width = 9)
-pdf("SMRsOverTime_2021.pdf", width = 12)
-# tiff("SMRsOverTime_2021.tiff", width = 860, height = 500)
+windows(width = 12)
 par(las = 1, font = 2, font.lab = 2, font.axis = 4, xlog = TRUE,
     mar = c(5, 4, 2, 2))
 with(smrs, plot(years - 0.1, blsmr, pch = 16, xlab = "Year", ylab = "SMR",
@@ -141,4 +150,3 @@ legend("bottomleft", c("African-American", "White"), lwd = 3, pch = c(16, 15),
        col = c(1, 4), bty = "n", cex = 1.3)
 axis(1, at = 2000:2018)
 abline(h = 1, lty = 2, lwd = 2)
-dev.off()
